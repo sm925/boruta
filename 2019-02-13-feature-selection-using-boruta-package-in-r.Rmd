@@ -1,0 +1,53 @@
+---
+title: "Feature Selection Using Boruta Package In R"
+author: "Suchait Mattoo"
+date: '2019-02-13'
+keywords: tech
+slug: feature-selection-using-boruta-package-in-r
+tags:
+- boruta
+- r
+categories: Feature Selection
+---
+
+```{r}
+## loading packages required
+library(Boruta)
+library(data.table)
+set.seed(123) # setting seed
+hrt <- read.csv("heart.csv", header = T, stringsAsFactors = F)
+setDT(hrt) # converting to data.table
+head(hrt) # peek at data
+```
+
+```{r}
+boruta.train <- Boruta(target ~ ., data = hrt, doTrace = 2) # running boruta on data
+```
+```{r}
+print(boruta.train)
+```
+```{r}
+#plot(boruta.train, xlab = "", xaxt = "n")
+```
+
+```{r}
+lz <- lapply(1:ncol(boruta.train$ImpHistory), function(i)
+  boruta.train$ImpHistory[is.finite(boruta.train$ImpHistory[, i]), i])
+names(lz) <- colnames(boruta.train$ImpHistory)
+Labels <- sort(sapply(lz, median))
+final.boruta <- TentativeRoughFix(boruta.train)
+print(final.boruta)
+```
+
+```{r}
+getSelectedAttributes(final.boruta, withTentative = F)
+boruta.df <- attStats(final.boruta)
+df <- cbind(Row.Names = rownames(boruta.df), boruta.df)
+setDT(df)
+df <- df[decision == "Confirmed", ]
+df1 <- data.frame(Row.Names = "target", meanImp = 1, medianImp = 1, minImp = 1, maxImp = 1, normHits = 1, decision = 1)
+df <- rbind(df, df1)
+col_list <- df[, Row.Names]
+hrt <- hrt[, col_list, with = F]
+head(hrt)
+```
